@@ -1,10 +1,12 @@
 % The name of this file: cddlibman.tex
 % written by by Komei Fukuda
 % created March 15, 1999
-% modified February 7, 2008
+% modified February 5, 2021
 %
 \documentclass[11pt]{article}
-\usepackage{html,amsmath,amssymb}
+%KF2021 add url and remove html
+\usepackage{url,amsmath,amssymb}
+\usepackage{url}
 \renewcommand{\baselinestretch}{1}
 \renewcommand{\arraystretch}{1}
 \setlength{\oddsidemargin}{0mm}
@@ -21,11 +23,14 @@
 \begin{document}
 \title{cddlib Reference Manual}
 \author{Komei Fukuda\\
-Institute for Operations Research\\
+%KF2021 update the affiliation
+%Institute for Operations Research\\
+Department of Mathematics\\
 and Institute of Theoretical Computer Science\\
 ETH Zentrum, CH-8092 Zurich, Switzerland\\
 }
-\date{ (cddlib ver. 0.94, manual ver. February 7, 2008)}
+%KF2021 date modified
+\date{ (cddlib ver. 0.94m, manual ver. February 8, 2021)}
 
 \maketitle
 
@@ -159,6 +164,9 @@ the intersection of finite halfspaces and the other
 as Minkowski sum of the convex hull of finite points
 and the nonnegative hull of finite directions.  These are
 called H-representation and V-representation, respectively.
+%KF2021 one sentence added
+The underlying theory is the Minkowski-Weyl theorem, 
+see \cite[Section 2.5]{f-pc-20}.
 
 Naturally there are two basic Polyhedra formats,
 H-format for  H-representation and V-format for
@@ -1045,10 +1053,14 @@ cddlp.c.
 
 \section{Examples}  \label{EXAMPLES}
 
-See example codes such as testcdd*.c , testlp*.c, redcheck.c, adjacency.c, allfaces,c
-and simplecdd.c
-in the {\tt src} and {\tt src-gmp} subdirectories of the source
-distribution.
+See example codes such as testcdd*.c , testlp*.c, redcheck.c, adjacency.c, allfaces.c,
+%KF2021 updates
+%simplecdd.c
+cddexec.c, scdd.c, lcdd.c, redundancies.c and redundancies\_clarkson.c
+in the {\tt src}
+%KF2021 delete this line
+%and {\tt src-gmp} subdirectories 
+subdirectory of the source distribution.
 
 \section{Numerical Accuracy}  \label{accuracy}
  A little caution is in order.  Many people have observed
@@ -1084,6 +1096,109 @@ Another thing one can do is scaling.  If the values in one column of
 an input is of smaller magnitude than those in another column,
 scale one so that they become comparable.
 
+%KF2021 s newly added section
+\section{A Little Philosophy behind Cddlib}  \label{PHILOSOPHY}
+
+Whenever I write a computer program, my most important goal is
+to write a code that is mathematically correct, humanly readable, and
+computationally effective,
+in this order.  This might sound like an easy thing to do, and I think it is actually true if you could
+find simple and beautiful algorithms for whatever problems you need to solve.
+
+Because of my strong interest in general convex polyhedra
+in higher dimensions, I have been searching for algorithms for 
+structural analysis (or understanding) of convex polyhedra that
+work without assuming any regularity assumptions like non-degeneracy.  
+Furthermore, I would like any algorithm to be both simple to describe 
+and simple to implement, to ensure the correctness and the implementability.
+The two textbooks I released in 2020,
+(1) Introduction to Optimization \cite{f-io-20} and 
+(2) Polyhedral Computation \cite{f-pc-20}, are in fact the theoretical and practical bases
+for developing the library cddlib.
+
+One of the most important facts on polyhedra is that the basic theory of
+convex polyhedra is often much simpler and more beautiful when one specializes 
+the theory to the homogeneous case.    
+Let $C$ be a homogeneous cone 
+$\{x : A x \ge 0\}$ for some $n\times d$ matrix $A$.  For a $d\times m$ matrix $R$, 
+we say that a pair of matrices $(A, R)$  is a {\em double-description pair\/} or 
+simply a {\em DD-pair\/} if
+\[
+  A x \ge 0 \hspace{5mm} \mbox{if and only if} \hspace{5mm} x = R \lambda,  
+  \mbox{ for some }\lambda \ge 0 .
+  \]
+ The left hand side says the matrix $A$ is an H-representation of the homogenous cone $C$,
+ and the right hand side says the matrix $R$ is a V-representation of $C$.  The most useful fact
+ about DD-pairs is the following lemma (see \cite[Section 2.5]{f-pc-20}):
+ \begin{quote}
+   $(A, R)$ is a DD-pair \hspace{3mm}  if and only if \hspace{3mm}  $(R^T, A^T)$ is a DD-pair.
+ \end{quote}
+This lemma implies that once you implement an algorithm to
+ compute $R$ from a given matrix $A$ so that $(A, R)$ is a DD-pair, 
+ the same algorithm works for the reverse conversion, namely, to compute a matrix $A$ for a given $R$
+ so that $(A, R)$ is a DD-pair.  The cddlib fully relies on this fact.
+ 
+For the non-homogeneous case, cddlib applies the standard homogenization,
+executes the representation conversion for the associated homogeneous cone,
+and then interprets the result for the input polyhedron.
+
+For example, consider the general H-format input:
+\begin{verbatim}
+H-representation
+begin
+n  d+1  <numbtype>
+b  -A
+end
+\end{verbatim}
+The associated H-cone is $C_h((b, -\!A)) = \{ (x_0, x_1, \ldots, x_d)^T:  b x_0 - A x >=0 \}$.
+The input H-polyhedron is the cut section of $C_h((b, -\!A))$ by 
+the hyperplane $x_0 =1$, which is a polyhedron in $R^d$.  When cddlib does
+the conversion from H to V, it does the conversion for $C_h((b, -\!A))$,
+and then converts the V-representation of the cone for the input polyhedron.
+
+Similarly, for the general V-format input, 
+\begin{verbatim}
+V-representation
+begin
+m  d+1 <numbtype>
+q  R
+end
+\end{verbatim}
+where $q$ is an $m$-dimensional vector and $R$ is an $m \times d$ matrix,
+the associated V-cone $C_v((q, R)) = \{ (x_0, x_1, \ldots, x_d)^T:  x = (q \; R)^T y,  y >=0 \}$,
+and the input polyhedron is the cone 
+restricted to the hyperplane $x_0 =1$.  It is a polyhedron in $R^d$.
+
+Notice that in the explanation of V-format in Section \ref{FORMAT}, each component of 
+the column vector $q$ is either $0$ or $1$.  While such restricted format is sufficient to
+represent any polyhedron, cddlib can accept the general V-format input.
+
+There is one problem with the explanation above, in particular,
+for the homogeneous case when $q$ is a totally zero vector.  In fact, V-format
+\begin{verbatim}
+V-representation
+begin
+s   d+1  <numbtype>
+0 r_1
+...
+0 r_s
+end
+\end{verbatim}
+where $r_j$ is a $d$-dimensional row vector for each $j$,
+must be identified with a more correct
+representation of generators of a homogeneous cone:
+\begin{verbatim}
+V-representation
+begin
+s+1   d+1  <numbtype>
+1 0 ... 0
+0 r_1
+...
+0 r_s
+end
+\end{verbatim}
+Within cddlib, this identification is explicitly done.
+
 \section{Other Useful Codes}  \label{CODES}
 There are several other useful codes available for vertex enumeration and/or
 convex hull computation  such as lrs, qhull, porta and irisa-polylib.
@@ -1115,10 +1230,8 @@ a variation of the dd algorithm).
 
  \item Linear Programming FAQ by R. Fourer and J. Gregory \cite{fg-lpfaq}.
 
- \item ZIB Berlin polyhedral software list:\\
- \htmladdnormallink{ftp://elib.zib-berlin.de/pub/mathprog/polyth/index.html}
-{ftp://elib.zib-berlin.de/pub/mathprog/polyth/index.html}.
-
+%KF2021 delete the next item as it does not seem to exist.
+% \item ZIB Berlin polyhedral software list: \url{ftp://elib.zib-berlin.de/pub/mathprog/polyth/index.html}.
 
 \item Polyhedral Computation FAQ \cite{f-pcfaq-98}.
 \end{enumerate}
@@ -1134,16 +1247,19 @@ Here are some of them.
 \item {\tt LattE} \cite{dhhhty-latte-05} computes the number of lattice points
 in a convex polytope.
 
-\item {\tt Minksum} \cite{w-msv-05} is a program to compute the V-representation
+%KF2021 update the reference of Minksum
+\item {\tt Minksum} \cite{w-msv} is a program to compute the V-representation
 (i.e. the set of vertices) of the Minkowski addition of several convex polytopes
 given by their V-representation in $\R^d$.  It is an implementation in C++ language
 of the reverse search algorithm \cite{f-fzctmacp-04} whose time complexity is
 polynomially bounded by the sizes of input and output.
 
-\item {\tt Gfan} \cite{j-gvum-05} is a program to list all reduced Gr\"obner
+%KF2021 update the reference of Gfan
+\item {\tt Gfan} \cite{j-gvum} is a program to list all reduced Gr\"obner
 bases of a general polynomial ideal given by a set of generating polynomials
 in $n$-variables.   It is an implementation in C++ language
-of the reverse search algorithm \cite{fjt-cgf-05}.
+%KF2021 update the citatioon fjt-cgf-05 with fjt-cgf-07
+of the reverse search algorithm \cite{fjt-cgf-07}.
 
 
 \item {\tt TOPCOM} \cite{r-topcom-05} computes the combinatorial structure
@@ -1167,12 +1283,16 @@ I am indebted to  David Avis,
 Alexander Bockmayr, David Bremner, Henry Crapo, Istvan Csabai,
 Francois Margot, Marc Pfetsch, Alain Prodon, J\"org Rambau, Dima Pasechnik,
 Shawn Rusaw, Matthew Saltzman, Masanori Sato, Anders Jensen,
-Ruriko Yoshida, Charles Geyer, Michal Kvasnica, Sven Verdoolaege
+Ruriko Yoshida, Charles Geyer, Michal Kvasnica, Sven Verdoolaege, 
+%KF2021 one added
+Mathieu Dutour Sikiri\'c.
  (listed in arbitrary order) and those listed
 in the HISTORY file.
 
 \bibliographystyle{plain}
 
-\bibliography{fukuda1,fukuda2}
+%KF2021 +2 edited below
+%\bibliography{fukuda1,fukuda2}
+\bibliography{cddlib}
 
 \end{document}
