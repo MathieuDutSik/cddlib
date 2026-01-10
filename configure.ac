@@ -34,11 +34,26 @@ case $host_os in
 ;;
 esac
 
-dnl Add -std:c11 flag for MSVC
+dnl Add C11 standard flag based on compiler
+dnl MSVC uses -std:c11 (with colon), GCC/Clang use -std=c11 (with equals)
+AC_MSG_CHECKING([for C11 support flag])
 case $host_os in
     *cygwin*|*mingw*)
-    AX_CHECK_COMPILE_FLAG([-std:c11], [AX_APPEND_FLAG([-std:c11])])
-;;
+        dnl Check if we're using MSVC (cl.exe) or GCC/Clang
+        if test "x$CC" = "xcl" || test "x$CC" = "xcl.exe"; then
+            dnl MSVC compiler
+            CFLAGS="$CFLAGS -std:c11"
+            AC_MSG_RESULT([MSVC -std:c11])
+        else
+            dnl GCC or Clang (MinGW/Cygwin)
+            CFLAGS="$CFLAGS -std=c11"
+            AC_MSG_RESULT([GCC/Clang -std=c11])
+        fi
+    ;;
+    *)
+        dnl On other platforms, don't add the flag
+        AC_MSG_RESULT([not needed])
+    ;;
 esac
 
 dnl Look for gmp. But do not prepend -lgmp to LIBS as we do not want to link everything against gmp.
